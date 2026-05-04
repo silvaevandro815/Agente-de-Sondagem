@@ -6,6 +6,8 @@ from supabase import create_client, Client
 from playwright.sync_api import sync_playwright
 import requests
 from bs4 import BeautifulSoup
+import unicodedata
+import urllib.parse
 
 # ==========================================
 # CONFIGURAÇÃO DE LOGS
@@ -47,12 +49,18 @@ def salvar_no_supabase(supabase: Client, dados: dict):
     except Exception as e:
         logger.error(f"Erro ao salvar no Supabase: {e}")
 
+def sanitizar_cidade(cidade: str) -> str:
+    """Remove acentos e formata a cidade para a URL."""
+    return ''.join(c.lower() for c in unicodedata.normalize('NFD', cidade) if unicodedata.category(c) != 'Mn')
+
 def buscar_clinicas(page, cidade):
     """Busca clínicas médicas no Google Maps e extrai as informações básicas."""
     logger.info(f"Buscando clínicas médicas em: {cidade}")
-    # Formata a URL de busca
-    busca = f"clinicas medicas em {cidade}".replace(' ', '+')
-    url = f"https://www.google.com/maps/search/{busca}/"
+    # Formata e sanitiza a URL de busca
+    cidade_sanitizada = sanitizar_cidade(cidade)
+    busca = f"clinicas medicas em {cidade_sanitizada}"
+    busca_encoded = urllib.parse.quote(busca)
+    url = f"https://www.google.com/maps/search/{busca_encoded}/"
     
     try:
         page.goto(url, timeout=60000)
@@ -74,6 +82,8 @@ def buscar_clinicas(page, cidade):
                 link.click()
                 page.wait_for_timeout(3000) # Espera abrir as informações do local
                 
+                page.wait_for_timeout(2000) # Força espera para o DOM carregar completamente os botões
+                
                 # Nome do Local
                 nome_element = page.locator("h1").first
                 nome = nome_element.inner_text() if nome_element else "Nome Indisponível"
@@ -91,6 +101,15 @@ def buscar_clinicas(page, cidade):
                         telefone = item_id.replace("phone:tel:", "")
                     if item_id.startswith("authority:"):
                         site = el.inner_text()
+                        if site and not site.startswith("http"):
+                            site = "https://" + site
+                            
+                # Tentar extrair o Site de forma mais robusta via link
+                link_site_locator = page.locator('a[data-value="Website"], a.lcr4fd, a[data-item-id="authority"]')
+                if link_site_locator.count() > 0:
+                    href = link_site_locator.first.get_attribute("href")
+                    if href:
+                        site = href
                 
                 if nome != "Nome Indisponível":
                     clinicas.append({
