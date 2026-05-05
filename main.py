@@ -110,6 +110,11 @@ def buscar_clinicas(page, cidade):
                     href = link_site_locator.first.get_attribute("href")
                     if href:
                         site = href
+                        
+                # Filtro rigoroso para anúncios do Google Maps e URLs inválidas
+                if site:
+                    if "/aclk" in site or not (site.startswith("http://") or site.startswith("https://")):
+                        site = None
                 
                 if nome != "Nome Indisponível":
                     clinicas.append({
