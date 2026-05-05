@@ -89,7 +89,8 @@ def buscar_clinicas(page, cidade):
                 nome = "Nome Indisponível"
                 for loc in nome_locators:
                     texto = loc.inner_text().strip()
-                    if texto and texto.lower() not in ["resultados", "results"]:
+                    texto_lower = texto.lower()
+                    if texto and texto_lower not in ["resultados", "results"] and not any(palavra in texto_lower for palavra in ["patrocinado", "anúncio", "anuncio", "sponsored"]):
                         nome = texto
                         break
                 
@@ -110,11 +111,24 @@ def buscar_clinicas(page, cidade):
                             site = "https://" + site
                             
                 # Tentar extrair o Site de forma mais robusta via link
-                link_site_locator = page.locator('a[data-value="Website"], a.lcr4fd, a[data-item-id="authority"]')
-                if link_site_locator.count() > 0:
-                    href = link_site_locator.first.get_attribute("href")
-                    if href:
+                # 1. Prioriza links que o Google identifica como site oficial
+                links_oficiais = page.locator('a[data-value="Website"], a.lcr4fd, a[data-item-id="authority"]').all()
+                for link_el in links_oficiais:
+                    href = link_el.get_attribute("href")
+                    if href and not href.startswith("/") and "/maps/" not in href and "/aclk" not in href:
                         site = href
+                        break
+                        
+                # 2. Fallback: busca por domínios comuns em todos os links da página
+                if not site or "google.com" in site or "/aclk" in site:
+                    links_gerais = page.locator("a[href]").all()
+                    for link_el in links_gerais:
+                        href = link_el.get_attribute("href")
+                        href_lower = href.lower() if href else ""
+                        if href_lower and not href_lower.startswith("/") and "/maps/" not in href_lower and "/search/" not in href_lower and "google.com" not in href_lower and "/aclk" not in href_lower:
+                            if ".com" in href_lower or ".med.br" in href_lower or ".net" in href_lower or ".org" in href_lower or ".br" in href_lower:
+                                site = href
+                                break
                         
                 # Filtro rigoroso para anúncios do Google Maps e URLs inválidas
                 if site:
