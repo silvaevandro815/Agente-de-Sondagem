@@ -44,8 +44,8 @@ def salvar_no_supabase(supabase: Client, dados: dict):
         return
         
     try:
-        data, count = supabase.table("prospeccao_agencia").insert(dados).execute()
-        logger.info(f"Sucesso ao salvar clínica: {dados.get('nome')}")
+        data, count = supabase.table("prospeccao_agencia").upsert(dados, on_conflict='telefone').execute()
+        logger.info(f"Sucesso ao salvar/atualizar clínica: {dados.get('nome')}")
     except Exception as e:
         logger.error(f"Erro ao salvar no Supabase: {e}")
 
@@ -85,8 +85,13 @@ def buscar_clinicas(page, cidade):
                 page.wait_for_timeout(2000) # Força espera para o DOM carregar completamente os botões
                 
                 # Nome do Local
-                nome_element = page.locator("h1").first
-                nome = nome_element.inner_text() if nome_element else "Nome Indisponível"
+                nome_locators = page.locator("h1.fontHeadlineLarge, div.fontHeadlineLarge, h1").all()
+                nome = "Nome Indisponível"
+                for loc in nome_locators:
+                    texto = loc.inner_text().strip()
+                    if texto and texto.lower() not in ["resultados", "results"]:
+                        nome = texto
+                        break
                 
                 # Telefone e Site
                 telefone = ""
