@@ -49,6 +49,30 @@ def salvar_no_supabase(supabase: Client, dados: dict):
     except Exception as e:
         logger.error(f"Erro ao salvar no Supabase: {e}")
 
+def sanitizar_telefone(telefone: str) -> str:
+    """Sanitiza o telefone para o formato 55+DDD+Numero."""
+    if not telefone:
+        return ""
+        
+    # Remove caracteres não numéricos
+    numeros = ''.join(filter(str.isdigit, telefone))
+    if not numeros:
+        return ""
+        
+    # Verifica se é 0800 ou 4004 antes de alterar
+    if numeros.startswith('0800') or numeros.startswith('4004'):
+        logger.warning(f"Aviso: O número {telefone} é um telefone especial (0800/4004) e provavelmente falhará no Handoff do WhatsApp.")
+        
+    # Remove '0' inicial (ex: 032988887777 -> 32988887777)
+    if numeros.startswith('0'):
+        numeros = numeros[1:]
+        
+    # Verifica se já possui o DDI 55
+    if not numeros.startswith('55'):
+        numeros = '55' + numeros
+        
+    return numeros
+
 def sanitizar_cidade(cidade: str) -> str:
     """Remove acentos e formata a cidade para a URL."""
     return ''.join(c.lower() for c in unicodedata.normalize('NFD', cidade) if unicodedata.category(c) != 'Mn')
@@ -242,16 +266,19 @@ def executar_varredura():
                 tem_chatbot, link_instagram = analisar_site(clinica.get('site'))
                 data_postagem = analisar_instagram(page, link_instagram)
                 
+                telefone_sanitizado = sanitizar_telefone(clinica.get('telefone'))
+                
                 # Monta objeto final
                 dados = {
                     "nome": clinica.get('nome'),
-                    "telefone": clinica.get('telefone'),
+                    "telefone": telefone_sanitizado,
                     "link_site": clinica.get('site'),
                     "status_chatbot": tem_chatbot,
                     "link_instagram": link_instagram,
                     "data_ultima_postagem": data_postagem,
                     "cidade": cidade,
-                    "data_captura": datetime.now().isoformat()
+                    "data_captura": datetime.now().isoformat(),
+                    "status_prospeccao": "pendente"
                 }
                 
                 # Salva no banco de dados Supabase
