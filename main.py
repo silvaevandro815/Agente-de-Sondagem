@@ -133,7 +133,7 @@ def executar_varredura():
                 logger.info("Encerramento solicitado. Parando varredura...")
                 break
 
-            logger.info(f"\n🏙️ Processando cidade: {cidade}")
+            logger.info(f"Iniciando sondagem na cidade: {cidade}")
             clinicas = buscar_clinicas(page, cidade)
 
             for clinica in clinicas:

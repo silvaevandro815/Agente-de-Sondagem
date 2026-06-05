@@ -15,7 +15,7 @@ logger = logging.getLogger('AgenteSondagem')
 # ==========================================
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-CIDADES_ALVO = [c.strip() for c in os.getenv("CIDADES_ALVO", "Muriaé, MG;Juiz de Fora, MG;Rio de Janeiro, RJ").split(";") if c.strip()]
+CIDADES_ALVO = [c.strip() for c in os.getenv("CIDADES_ALVO", "Rio de Janeiro - RJ, Muriaé - MG, Juiz de Fora - MG").split(",") if c.strip()]
 INTERVALO_HORAS = int(os.getenv("INTERVALO_HORAS", 24))
 MAX_RESULTADOS_POR_CIDADE = int(os.getenv("MAX_RESULTADOS_POR_CIDADE", 30))
 
